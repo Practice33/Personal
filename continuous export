@@ -1,0 +1,44 @@
+param(
+[Parameter(Mandatory = $true)]
+[string]
+$StorageAccountName,
+
+[Parameter(Mandatory = $true)]
+[string]
+$StorageAccountResourceGroupName,
+
+[Parameter(Mandatory = $true)]
+[string]
+$BlobContainerName,
+
+[Parameter(Mandatory = $true)]
+[string]
+$ApplicationInsightsName,
+
+[Parameter(Mandatory = $true)]
+[string]
+$ApplicationInsightsResourceGroupName,
+
+[Parameter(Mandatory = $true)]
+[string]
+$StorageLocation
+)
+
+# Terminates the script on an error action.
+$ErrorActionPreference = "Stop"
+
+# Gets the storage account context for the purpose of creating the blob container and exporting Application Insights data into it. If the specified storage account name does not exist,
+# an exception is thrown and the script execution is halted.
+$storageAccount = Get-AzStorageAccount -Name $StorageAccountName -ResourceGroupName $StorageAccountResourceGroupName
+
+# Create a SAS URI for an Azure storage container.
+$sasuri = New-AzureStorageContainerSASToken -Name $BlobContainerName -Context $storageAccount.Context -ExpiryTime (Get-Date).AddYears(50) -Permission w -FullUri
+
+#Enabling Continuous export on the Application Insights
+New-AzureRmApplicationInsightsContinuousExport -ResourceGroupName $ApplicationInsightsResourceGroupName -Name $ApplicationInsightsName `
+-DocumentType "Request", "Exception", "Trace", "Custom Event", "Dependency" `
+-StorageAccountId $storageAccount.Id `
+-StorageLocation $StorageLocation `
+-StorageSASUri $sasuri
+
+
